@@ -6,6 +6,7 @@ import jwt
 import pyotp
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
@@ -225,14 +226,12 @@ def delete_account(credential_user: UserAuthentication) -> Response:
         Response from the view.
     """
     try:
-        breakpoint()
-        user = perform_authentication(credential_user)
-        User.query.filter(User.email == user.email).delete()
+        User.query.filter(and_(User.email == credential_user.email, User.password == credential_user.password)).delete()
         return Response(status_code=204)
     except Exception:
         return Response(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content=str({"error": "User cannot be delete or is not login"}),
+            content=str({"error": "User cannot be delete."}),
         )
 
 
