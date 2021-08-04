@@ -10,6 +10,7 @@ from sendgrid.helpers.mail import Mail, Email, To, Content
 from fastapi import HTTPException
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
+from starlette.responses import Response
 from twilio.rest import Client
 
 from api.models import User, PhoneValidationUser, OTPUser
