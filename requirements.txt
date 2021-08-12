@@ -1,10 +1,12 @@
 aiofiles
+bcrypt
 config
 environ
 fastapi
 fastapi-authz
 fastapi_login
 fastapi-sessions
+jinja2
 pydantic
 psycopg2
 pytest

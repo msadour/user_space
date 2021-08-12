@@ -3,16 +3,18 @@
 from datetime import datetime, timedelta
 import random
 from typing import Any
+import jwt
 
 import pyotp
 import sendgrid
+from jwt import DecodeError
 from sendgrid.helpers.mail import Mail, Email, To, Content
 from fastapi import HTTPException
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
-from starlette.responses import Response
 from twilio.rest import Client
 
+from api.hasher import Hasher
 from api.models import User, PhoneValidationUser, OTPUser
 from api.schemas import UserDataSchema, UserAuthentication
 from api.settings import Settings
@@ -43,7 +45,7 @@ def send_email(to_email_user: str, otp_secret: str) -> None:
     sg = sendgrid.SendGridAPIClient(api_key=settings.sendgrid_api_key)
     from_email = Email("sadour.mehdi@gmail.com")
     to_email = To(to_email_user)
-    link = "0.0.0.0:8000/verify-otp/{0}/{1}".format(otp_secret, to_email_user)
+    link = "0.0.0.0:8000/api/verify-otp/{0}/{1}".format(otp_secret, to_email_user)
 
     subject = "Verify your account"
 
@@ -55,6 +57,15 @@ def send_email(to_email_user: str, otp_secret: str) -> None:
     sg.client.mail.send.post(request_body=mail_json)
 
 
+def get_payload_from_token(request):
+    token = request.headers.get("token")
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+        return payload
+    except DecodeError:
+        raise Exception("Token not valid")
+
+
 def perform_authentication(user: UserAuthentication) -> User:
     """Authenticate a user.
 
@@ -64,14 +75,19 @@ def perform_authentication(user: UserAuthentication) -> User:
     Returns:
         User authenticated.
     """
-    user_db = User.query.filter(
-        and_(User.email == user.email, User.password == user.password)
-    ).first()
+    user_db = User.query.filter(and_(User.email == user.email)).first()
+
     if user_db is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if not user_db.is_opt_verified or not user_db.is_password_supplied:
-        raise HTTPException(status_code=404, detail="Account not validated")
+    if not Hasher.verify_password(user.password, user_db.password):
+        raise HTTPException(status_code=404, detail="Wrong password")
+
+    if not user_db.is_opt_verified:
+        raise HTTPException(status_code=404, detail="Account not verified")
+
+    if not user_db.is_password_supplied:
+        raise HTTPException(status_code=404, detail="Password not supplied")
 
     return user_db
 
@@ -86,8 +102,9 @@ def perform_create_user(db: Session, user: UserDataSchema) -> User:
     Returns:
         User created.
     """
+    hashed_password = Hasher.get_password_hash(user.password)
     user = User(
-        email=user.email, password=user.password, phone_number=user.phone_number
+        email=user.email, password=hashed_password, phone_number=user.phone_number
     )
     db.add(user)
     db.commit()
@@ -130,4 +147,3 @@ def perform_send_sms_to_user(user: User, to_number: str, db: Session) -> Any:
         body="Your code authentication is " + code,
         messaging_service_sid=settings.messaging_service_sid,
     )
-

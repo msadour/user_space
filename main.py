@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.models import Base, engine
 from api.views import router
 
+from webpages.views import router_web_pages
+
 
 Base.metadata.create_all(bind=engine)
 
@@ -31,3 +33,4 @@ def get_application() -> FastAPI:
 app = get_application()
 
 app.include_router(router)
+app.include_router(router_web_pages)

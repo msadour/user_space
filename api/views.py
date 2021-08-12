@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from starlette import status
 from starlette.responses import Response
 
+from api.hasher import Hasher
 from api.models import User, SessionLocal, PhoneValidationUser, OTPUser
 from api.schemas import (
     UserDataSchema,
@@ -24,7 +25,8 @@ from api.utils import (
     perform_create_user,
     get_user_by_email,
     perform_authentication,
-    perform_send_sms_to_user
+    perform_send_sms_to_user,
+    get_payload_from_token,
 )
 
 router = APIRouter()
@@ -40,7 +42,7 @@ def get_db() -> None:
         db.close()
 
 
-@router.post("/auth")
+@router.post("/api/auth")
 def auth(info_user: UserAuthentication) -> Response:
     """View for authentication of user (email / password).
 
@@ -57,7 +59,7 @@ def auth(info_user: UserAuthentication) -> Response:
     return Response(status_code=status.HTTP_200_OK, content=str({"token": token}))
 
 
-@router.get("/verify-otp/{otp_secret}/{to_email}")
+@router.get("/api/verify-otp/{otp_secret}/{to_email}")
 def verify_otp(otp_secret, to_email, db: Session = Depends(get_db)) -> Response:
     """View for verify the One Time Password.
 
@@ -97,7 +99,7 @@ def verify_otp(otp_secret, to_email, db: Session = Depends(get_db)) -> Response:
     return Response(status_code=status.HTTP_200_OK, content=str({"token": token}))
 
 
-@router.post("/refresh-otp")
+@router.post("/api/refresh-otp")
 def refresh_otp(info_user: UserAuthentication, db: Session = Depends(get_db)) -> None:
     """View for refresh the link of OTP.
 
@@ -115,7 +117,7 @@ def refresh_otp(info_user: UserAuthentication, db: Session = Depends(get_db)) ->
     db.commit()
 
 
-@router.post("/supply-password")
+@router.post("/api/supply-password")
 def supply_password(
     data: SupplyPassword, request: Request, db: Session = Depends(get_db)
 ) -> Response:
@@ -132,7 +134,11 @@ def supply_password(
     token = request.headers.get("token")
     payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
     user = User.query.filter(User.email == payload["email"]).first()
-    if data.password == user.password and data.password == data.password_again:
+
+    if (
+        Hasher.verify_password(data.password, user.password)
+        and data.password == data.password_again
+    ):
         user.is_password_supplied = True
         db.commit()
         return Response(
@@ -142,11 +148,11 @@ def supply_password(
     else:
         return Response(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content=str({"error": "Passwords don't match."}),
+            content=str({"error": "Passwords don't match or are wrong."}),
         )
 
 
-@router.post("/send-sms")
+@router.post("/api/send-sms")
 def send_sms(user_phone: UserPhone, db: Session = Depends(get_db)) -> Response:
     """View for sending sms.
 
@@ -168,7 +174,7 @@ def send_sms(user_phone: UserPhone, db: Session = Depends(get_db)) -> Response:
         )
 
 
-@router.post("/auth-sms")
+@router.post("/api/auth-sms")
 def auth_sms(info_user: UserPhoneValidation) -> Response:
     """View for authenticate a user through a code receive by sms.
 
@@ -197,7 +203,7 @@ def auth_sms(info_user: UserPhoneValidation) -> Response:
         )
 
 
-@router.post("/registration")
+@router.post("/api/registration")
 def registration(info_user: UserDataSchema, db: Session = Depends(get_db)) -> Response:
     """View for create a user.
 
@@ -215,18 +221,21 @@ def registration(info_user: UserDataSchema, db: Session = Depends(get_db)) -> Re
     return Response(status_code=status.HTTP_201_CREATED)
 
 
-@router.delete("/delete_account")
-def delete_account(credential_user: UserAuthentication) -> Response:
+@router.delete("/api/delete_account")
+def delete_account(request: Request) -> Response:
     """View for account deletion.
 
     Args:
-        credential_user:
+        request:
 
     Returns:
         Response from the view.
     """
     try:
-        User.query.filter(and_(User.email == credential_user.email, User.password == credential_user.password)).delete()
+        payload = get_payload_from_token(request)
+        User.query.filter(
+            and_(User.email == payload["email"], User.password == payload["password"])
+        ).delete()
         return Response(status_code=204)
     except Exception:
         return Response(
@@ -235,8 +244,8 @@ def delete_account(credential_user: UserAuthentication) -> Response:
         )
 
 
-@router.post("/logout")
-def logout_user() -> Response:
+@router.get("/api/logout")
+def logout_user(request: Request) -> Response:
     """View for log out.
 
     Returns:
@@ -250,3 +259,26 @@ def logout_user() -> Response:
             status_code=status.HTTP_401_UNAUTHORIZED,
             content=str({"error": "User cannot be delete or is not login"}),
         )
+
+
+@router.get("/api/access_profile")
+def access_profile(request: Request) -> User:
+    """View for user information access.
+
+    Returns:
+        Response from the view.
+    """
+    payload = get_payload_from_token(request)
+    user = User.query.filter(User.email == payload["email"]).first()
+
+    return user.as_json()
+
+
+@router.get("/api/all_profile")
+def all_profile():
+    """View for all users access.
+
+    Returns:
+        Response from the view.
+    """
+    return [user.as_json() for user in User.query.all()]

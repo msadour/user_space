@@ -1,5 +1,7 @@
 """Models."""
 
+import bcrypt
+
 from sqlalchemy import (
     create_engine,
     Column,
@@ -31,6 +33,15 @@ class User(Base):
     phone_number = Column(String)
     is_opt_verified = Column(Boolean, default=False)
     is_password_supplied = Column(Boolean, default=False)
+
+    def verify_password(self, password):
+        pwhash = bcrypt.hashpw(password, self.password)
+        return self.password == pwhash
+
+    def as_json(self):
+        return {
+            attr: value for attr, value in self.__dict__.items() if attr != "password"
+        }
 
 
 class TokenValidation(Base):

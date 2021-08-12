@@ -34,7 +34,7 @@ $ docker-compose build && docker-compose up
 
 ### Registration
 
-* url : http://0.0.0.0:8000/registration
+* url : http://0.0.0.0:8000/api/registration
 * method : POST
 * Payload : {
     "email": "valid-email",
@@ -50,7 +50,7 @@ $ docker-compose build && docker-compose up
 
 ### Refresh the link validation
 
-* url : http://0.0.0.0:8000/refresh-otp
+* url : http://0.0.0.0:8000/api/refresh-otp
 * method : POST
 * Payload : {
     "email": "your-email",
@@ -60,7 +60,7 @@ $ docker-compose build && docker-compose up
 
 ### Supply password
 
-* url : http://0.0.0.0:8000/supply-password
+* url : http://0.0.0.0:8000/api/supply-password
 * method : POST
 * Payload : {
     "password": "password",
@@ -70,7 +70,7 @@ $ docker-compose build && docker-compose up
 
 ### Authentication with email/password
 
-* url : http://0.0.0.0:8000/auth
+* url : http://0.0.0.0:8000/api/auth
 * method : POST
 * Payload : {
     "email": "your-email",
@@ -81,7 +81,7 @@ $ docker-compose build && docker-compose up
 
 First you have to send a sms in order to receive your code authentication
 
-* url : http://0.0.0.0:8000/send-sms
+* url : http://0.0.0.0:8000/api/send-sms
 * method : POST
 * Payload : {
     "phone": "your-phone-number"
@@ -89,7 +89,7 @@ First you have to send a sms in order to receive your code authentication
   
 Then send this code
 
-* url : http://0.0.0.0:8000/auth-sms
+* url : http://0.0.0.0:8000/api/auth-sms
 * method : POST
 * Payload : {
     "phone": "your-phone-number",
@@ -99,7 +99,7 @@ Then send this code
 
 ### Delete profile
 
-* url : http://0.0.0.0:8000/delete_account
+* url : http://0.0.0.0:8000/api/delete_account
 * method : DELETE
 * Payload : {
     "email": "your-email",
