@@ -1,3 +1,5 @@
+"""Test file."""
+
 import random
 import string
 
@@ -22,7 +24,7 @@ fake_email = (
 )
 
 
-def test_registration():
+def test_registration() -> None:
     response = client.post(
         "/registration",
         json={"email": fake_email, "password": "pass", "phone_number": "0555555"},

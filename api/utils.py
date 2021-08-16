@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 import random
-from typing import Any
+from typing import Any, Dict
 import jwt
 
 import pyotp
@@ -12,6 +12,7 @@ from sendgrid.helpers.mail import Mail, Email, To, Content
 from fastapi import HTTPException
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
+from starlette.requests import Request
 from twilio.rest import Client
 
 from api.hasher import Hasher
@@ -24,19 +25,19 @@ settings = Settings()
 
 
 def get_user_by_email(email: str) -> User:
-    """.
+    """Get a user via his email.
 
     Args:
         email:
 
     Returns:
-        .
+        User object.
     """
     return User.query.filter(User.email == email).first()
 
 
 def send_email(to_email_user: str, otp_secret: str) -> None:
-    """Send an email to the user in order to verify him.
+    """Send an email to the user in order to verify it.
 
     Args:
         to_email_user:
@@ -57,7 +58,15 @@ def send_email(to_email_user: str, otp_secret: str) -> None:
     sg.client.mail.send.post(request_body=mail_json)
 
 
-def get_payload_from_token(request):
+def get_payload_from_token(request: Request) -> Dict:
+    """get information of a user regarding the token sent.
+
+    Args:
+        request:
+
+    Returns:
+        payload.
+    """
     token = request.headers.get("token")
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])

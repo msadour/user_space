@@ -121,7 +121,7 @@ def refresh_otp(info_user: UserAuthentication, db: Session = Depends(get_db)) ->
 def supply_password(
     data: SupplyPassword, request: Request, db: Session = Depends(get_db)
 ) -> Response:
-    """View for .
+    """View for supplied password.
 
     Args:
         data:
@@ -244,23 +244,6 @@ def delete_account(request: Request) -> Response:
         )
 
 
-@router.get("/api/logout")
-def logout_user(request: Request) -> Response:
-    """View for log out.
-
-    Returns:
-        Response from the view.
-    """
-    try:
-        jwt.encode({"exp": datetime.now()}, settings.jwt_secret)
-        return Response(status_code=200)
-    except Exception:
-        return Response(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content=str({"error": "User cannot be delete or is not login"}),
-        )
-
-
 @router.get("/api/access_profile")
 def access_profile(request: Request) -> User:
     """View for user information access.
@@ -271,7 +254,7 @@ def access_profile(request: Request) -> User:
     payload = get_payload_from_token(request)
     user = User.query.filter(User.email == payload["email"]).first()
 
-    return user.as_json()
+    return user.info_without_password()
 
 
 @router.get("/api/all_profile")
@@ -281,4 +264,4 @@ def all_profile():
     Returns:
         Response from the view.
     """
-    return [user.as_json() for user in User.query.all()]
+    return [user.info_without_password() for user in User.query.all()]

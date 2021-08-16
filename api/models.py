@@ -1,6 +1,6 @@
-"""Models."""
+"""Models file."""
 
-import bcrypt
+from typing import Dict
 
 from sqlalchemy import (
     create_engine,
@@ -34,11 +34,7 @@ class User(Base):
     is_opt_verified = Column(Boolean, default=False)
     is_password_supplied = Column(Boolean, default=False)
 
-    def verify_password(self, password):
-        pwhash = bcrypt.hashpw(password, self.password)
-        return self.password == pwhash
-
-    def as_json(self):
+    def info_without_password(self) -> Dict:
         return {
             attr: value for attr, value in self.__dict__.items() if attr != "password"
         }
