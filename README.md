@@ -8,10 +8,10 @@ user_space is an API that allows MFA and account deletion.
 
 ## Tech/framework
 
-* Framework: ``FastAPI``
-* Database: ``postgres`` 
-* Containerization ```Docker```
-* Testing ```pytest```
+* Framework : ``FastAPI``
+* Database : ``postgres`` 
+* Containerization : ```Docker```
+* Testing : ```pytest```
 
 ## Installation
 
